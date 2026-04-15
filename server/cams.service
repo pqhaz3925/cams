@@ -1,0 +1,18 @@
+[Unit]
+Description=Cams surveillance server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/opt/cams-server
+WorkingDirectory=/opt/cams-data
+Restart=always
+RestartSec=5
+Environment=CAMS_ADDR=:7000
+Environment=CAMS_TCP_ADDR=:7001
+Environment=CAMS_REC_DIR=/opt/cams-data/recordings
+Environment=CAMS_USER=admin
+Environment=CAMS_PASS=changeme   # CHANGE THIS
+
+[Install]
+WantedBy=multi-user.target

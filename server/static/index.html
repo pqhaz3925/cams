@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SURVEILLANCE MONITOR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:           #080808;
+  --surface:      #0c0c0c;
+  --border:       #161616;
+  --border-hi:    #242424;
+  --text:         #888;
+  --text-hi:      #ccc;
+  --text-lo:      #333;
+  --accent:       #00e676;
+  --accent-bg:    rgba(0,230,118,.08);
+  --accent-border:rgba(0,230,118,.25);
+  --offline:      #e53935;
+  --offline-bg:   rgba(229,57,53,.08);
+  --offline-border:rgba(229,57,53,.25);
+  --font: 'Share Tech Mono', 'Courier New', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:12px;overflow-x:hidden}
+
+/* scanline texture */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px);
+}
+
+/* ── header ── */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 18px;border-bottom:1px solid var(--border);background:#040404;
+  position:sticky;top:0;z-index:200;
+}
+.h-brand{display:flex;align-items:center;gap:10px;letter-spacing:.18em;font-size:11px;color:var(--text-hi)}
+.h-box{
+  width:16px;height:16px;border:1px solid var(--accent);position:relative;flex-shrink:0;
+}
+.h-box::after{content:'';position:absolute;inset:3px;background:var(--accent)}
+.h-right{display:flex;align-items:center;gap:20px;font-size:11px;letter-spacing:.12em}
+.h-count{color:var(--accent)}
+#clock{color:var(--text);letter-spacing:.06em}
+.h-sep{color:var(--text-lo)}
+
+/* ── grid ── */
+main{padding:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:680px){.grid{grid-template-columns:1fr}}
+
+/* ── feed unit ── */
+.unit{display:flex;flex-direction:column;border:1px solid var(--border);background:var(--surface);transition:border-color .3s}
+.unit.live{border-color:#1c1c1c}
+
+/* ── feed ── */
+.feed{position:relative;background:#020202;aspect-ratio:4/3;overflow:hidden;flex-shrink:0}
+
+/* CRT vignette */
+.feed::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:8;
+  background:radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.55) 100%);
+}
+
+.feed-img{width:100%;height:100%;object-fit:cover;display:block;transition:filter .4s}
+.feed-img.dim{filter:brightness(.04) grayscale(1)}
+
+/* no-signal */
+.nosig{
+  position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;pointer-events:none;
+  opacity:0;transition:opacity .4s;
+}
+.nosig.show{opacity:1}
+.nosig-bars{display:flex;gap:3px;align-items:flex-end;height:28px}
+.nosig-bars b{
+  width:3px;background:var(--text-lo);display:block;
+  animation:barflicker .9s infinite ease-in-out;
+}
+.nosig-bars b:nth-child(1){height:7px;animation-delay:.00s}
+.nosig-bars b:nth-child(2){height:14px;animation-delay:.09s}
+.nosig-bars b:nth-child(3){height:22px;animation-delay:.18s}
+.nosig-bars b:nth-child(4){height:10px;animation-delay:.27s}
+.nosig-bars b:nth-child(5){height:18px;animation-delay:.12s}
+.nosig-bars b:nth-child(6){height:5px;animation-delay:.04s}
+@keyframes barflicker{0%,100%{opacity:.25}50%{opacity:.7}}
+.nosig-txt{font-size:10px;letter-spacing:.35em;color:var(--text-lo)}
+
+/* corners */
+.corner{position:absolute;width:13px;height:13px;z-index:9;transition:border-color .3s}
+.corner.tl{top:9px;left:9px;border-top:1px solid var(--text-lo);border-left:1px solid var(--text-lo)}
+.corner.tr{top:9px;right:9px;border-top:1px solid var(--text-lo);border-right:1px solid var(--text-lo)}
+.corner.bl{bottom:9px;left:9px;border-bottom:1px solid var(--text-lo);border-left:1px solid var(--text-lo)}
+.corner.br{bottom:9px;right:9px;border-bottom:1px solid var(--text-lo);border-right:1px solid var(--text-lo)}
+.unit.live .corner{border-color:var(--accent)}
+.unit.dead .corner{border-color:var(--offline)}
+
+/* top overlay */
+.feed-top{
+  position:absolute;top:0;left:0;right:0;padding:10px 12px;
+  display:flex;justify-content:space-between;align-items:center;z-index:9;
+}
+.rec{
+  display:flex;align-items:center;gap:5px;font-size:10px;letter-spacing:.2em;
+  color:var(--offline);opacity:0;transition:opacity .3s;
+}
+.unit.live .rec{animation:recblink 2.4s infinite}
+@keyframes recblink{0%,45%{opacity:1}50%,100%{opacity:.25}}
+.rec-dot{width:5px;height:5px;border-radius:50%;background:var(--offline);flex-shrink:0}
+.feed-ts{font-size:10px;letter-spacing:.04em;color:var(--text-lo);opacity:0;transition:opacity .3s}
+.unit.live .feed-ts{opacity:1}
+
+/* bottom overlay */
+.feed-bot{
+  position:absolute;bottom:0;left:0;right:0;z-index:9;
+  padding:22px 12px 10px;
+  background:linear-gradient(transparent,rgba(0,0,0,.72));
+  display:flex;align-items:center;justify-content:space-between;
+}
+.cam-lbl{font-size:11px;letter-spacing:.22em;color:var(--text-hi)}
+.status-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:2px 9px;border-radius:999px;font-size:10px;letter-spacing:.18em;
+  background:var(--offline-bg);color:var(--offline);border:1px solid var(--offline-border);
+  transition:all .3s;
+}
+.status-pill.live{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-border)}
+.spill-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.status-pill.live .spill-dot{animation:lblink 2s infinite}
+@keyframes lblink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── bar below feed ── */
+.bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 11px;border-top:1px solid var(--border);background:#080808;
+}
+.btn-cfg{
+  background:none;border:1px solid var(--border-hi);color:var(--text-lo);
+  font-family:var(--font);font-size:10px;letter-spacing:.18em;padding:3px 10px;
+  cursor:pointer;transition:all .15s;user-select:none;
+}
+.btn-cfg:hover,.btn-cfg.on{border-color:var(--accent);color:var(--accent)}
+.btn-cfg.on{background:var(--accent-bg)}
+.rec-link{
+  font-size:10px;letter-spacing:.14em;color:var(--text-lo);text-decoration:none;transition:color .15s;
+}
+.rec-link:hover{color:var(--text)}
+
+/* ── settings panel ── */
+.panel{overflow:hidden;max-height:0;transition:max-height .28s ease;background:#070707}
+.panel.open{max-height:500px;border-top:1px solid var(--border)}
+.panel-inner{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:13px 22px}
+
+.srow{display:flex;flex-direction:column;gap:6px}
+.srow.full{grid-column:1/-1}
+
+.slbl{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-size:10px;letter-spacing:.2em;color:var(--text-lo);
+}
+.slbl .sval{color:var(--text);font-size:11px}
+
+/* range */
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:2px;background:var(--border-hi);outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:10px;height:10px;background:var(--accent);cursor:pointer;
+}
+input[type=range]::-moz-range-thumb{width:10px;height:10px;background:var(--accent);border:none;cursor:pointer}
+
+/* select */
+select{
+  background:var(--surface);border:1px solid var(--border-hi);color:var(--text);
+  font-family:var(--font);font-size:11px;padding:5px 8px;width:100%;
+  cursor:pointer;outline:none;letter-spacing:.05em;
+}
+select:focus{border-color:var(--accent)}
+
+/* night mode */
+.night-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 0;border-top:1px solid var(--border);
+}
+.night-info .night-lbl{font-size:11px;letter-spacing:.18em;color:var(--text)}
+.night-info .night-sub{font-size:10px;color:var(--text-lo);letter-spacing:.12em;margin-top:2px}
+
+/* toggle */
+.toggle{position:relative;width:46px;height:22px;cursor:pointer;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.ttrack{position:absolute;inset:0;background:var(--border-hi);border:1px solid var(--border-hi);transition:all .2s}
+.tthumb{position:absolute;top:3px;left:3px;width:14px;height:14px;background:var(--text-lo);transition:all .2s}
+.toggle input:checked+.ttrack{background:var(--accent-bg);border-color:var(--accent)}
+.toggle input:checked~.tthumb{transform:translateX(24px);background:var(--accent)}
+
+/* save indicator */
+.sindic{grid-column:1/-1;text-align:right;font-size:10px;letter-spacing:.18em;color:var(--text-lo);transition:color .25s;min-height:14px}
+.sindic.ok{color:var(--accent)}
+.sindic.wait{color:var(--text)}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border-hi)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-brand">
+    <div class="h-box"></div>
+    <span>SURVEILLANCE_MONITOR</span>
+  </div>
+  <div class="h-right">
+    <span><span class="h-count" id="h-count">0</span><span class="h-sep"> / 2 ONLINE</span></span>
+    <span id="clock">--:--:--</span>
+  </div>
+</header>
+
+<main>
+  <div class="grid" id="grid"></div>
+</main>
+
+<script>
+const CAMS = ['cam0','cam1'];
+
+// ── clock ──────────────────────────────────────────────────────────────────
+function tick() { document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8); }
+setInterval(tick, 1000); tick();
+
+// ── build DOM ──────────────────────────────────────────────────────────────
+function buildUnit(id) {
+  const n = CAMS.indexOf(id);
+  const div = document.createElement('div');
+  div.className = 'unit dead';
+  div.id = `unit-${id}`;
+  div.innerHTML = `
+    <div class="feed" id="feed-${id}">
+      <img class="feed-img dim" id="img-${id}" src="/live/${id}"
+           onerror="imgErr('${id}')" onload="imgLoad('${id}')">
+      <div class="nosig show" id="ns-${id}">
+        <div class="nosig-bars"><b></b><b></b><b></b><b></b><b></b><b></b></div>
+        <div class="nosig-txt">NO SIGNAL</div>
+      </div>
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+      <div class="feed-top">
+        <div class="rec"><div class="rec-dot"></div>REC</div>
+        <div class="feed-ts" id="ts-${id}"></div>
+      </div>
+      <div class="feed-bot">
+        <div class="cam-lbl">CAM_${n}</div>
+        <div class="status-pill" id="pill-${id}">
+          <div class="spill-dot"></div><span id="ptxt-${id}">OFFLINE</span>
+        </div>
+      </div>
+    </div>
+    <div class="bar">
+      <button class="btn-cfg" id="cfg-${id}" onclick="togglePanel('${id}')">⊞ SETTINGS</button>
+      <a class="rec-link" href="/rec/${id}/" target="_blank">⊟ RECORDINGS</a>
+    </div>
+    <div class="panel" id="panel-${id}">
+      <div class="panel-inner">
+        <div class="srow">
+          <div class="slbl">BRIGHTNESS<span class="sval" id="bv-${id}">0</span></div>
+          <input type="range" min="-2" max="2" value="0" id="brightness-${id}"
+                 oninput="sl(this,'${id}','bv-${id}')">
+        </div>
+        <div class="srow">
+          <div class="slbl">CONTRAST<span class="sval" id="cv-${id}">0</span></div>
+          <input type="range" min="-2" max="2" value="0" id="contrast-${id}"
+                 oninput="sl(this,'${id}','cv-${id}')">
+        </div>
+        <div class="srow">
+          <div class="slbl">EXP BIAS<span class="sval" id="av-${id}">0</span></div>
+          <input type="range" min="-2" max="2" value="0" id="ae_level-${id}"
+                 oninput="sl(this,'${id}','av-${id}')">
+        </div>
+        <div class="srow">
+          <div class="slbl">JPEG QUAL<span class="sval" id="qv-${id}">12</span></div>
+          <input type="range" min="4" max="63" value="12" id="jpeg_quality-${id}"
+                 oninput="sl(this,'${id}','qv-${id}')">
+        </div>
+        <div class="srow full">
+          <div class="slbl">RESOLUTION</div>
+          <select id="frame_size-${id}" onchange="schedPost('${id}')">
+            <option value="5">VGA  —  640 × 480</option>
+            <option value="8">SVGA —  800 × 600</option>
+            <option value="9">XGA  — 1024 × 768</option>
+            <option value="10">HD  — 1280 × 720</option>
+          </select>
+        </div>
+        <div class="srow full">
+          <div class="night-row">
+            <div class="night-info">
+              <div class="night-lbl">NIGHT MODE</div>
+              <div class="night-sub">MAX GAIN · LONG EXPOSURE</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="night_mode-${id}" onchange="schedPost('${id}')">
+              <div class="ttrack"></div>
+              <div class="tthumb"></div>
+            </label>
+          </div>
+        </div>
+        <div class="sindic" id="si-${id}"></div>
+      </div>
+    </div>`;
+  return div;
+}
+
+const grid = document.getElementById('grid');
+CAMS.forEach(id => grid.appendChild(buildUnit(id)));
+
+// ── panel toggle ───────────────────────────────────────────────────────────
+function togglePanel(id) {
+  const p = document.getElementById(`panel-${id}`);
+  const b = document.getElementById(`cfg-${id}`);
+  const open = p.classList.toggle('open');
+  b.classList.toggle('on', open);
+  if (open) loadSettings(id);
+}
+
+// ── settings fetch / post ──────────────────────────────────────────────────
+async function loadSettings(id) {
+  try {
+    const r = await fetch(`/cmd/${id}`);
+    if (!r.ok) return;
+    const s = await r.json();
+    applyToForm(id, s);
+  } catch(_) {}
+}
+
+function applyToForm(id, s) {
+  const fields = ['brightness','contrast','ae_level','jpeg_quality'];
+  const valIds = ['bv','cv','av','qv'];
+  fields.forEach((f,i) => {
+    const el = document.getElementById(`${f}-${id}`);
+    const vi = document.getElementById(`${valIds[i]}-${id}`);
+    if (el && s[f] !== undefined) { el.value = s[f]; if(vi) vi.textContent = s[f]; }
+  });
+  const fs = document.getElementById(`frame_size-${id}`);
+  if (fs && s.frame_size !== undefined) fs.value = s.frame_size;
+  const nm = document.getElementById(`night_mode-${id}`);
+  if (nm && s.night_mode !== undefined) nm.checked = s.night_mode;
+}
+
+const timers = {};
+function schedPost(id) {
+  clearTimeout(timers[id]);
+  setIndic(id, 'wait', 'PENDING');
+  timers[id] = setTimeout(() => doPost(id), 500);
+}
+
+async function doPost(id) {
+  const num  = f => Number((document.getElementById(`${f}-${id}`)||{}).value ?? 0);
+  const bool = f => !!(document.getElementById(`${f}-${id}`)||{}).checked;
+  const body = {
+    brightness:   num('brightness'),
+    contrast:     num('contrast'),
+    ae_level:     num('ae_level'),
+    jpeg_quality: num('jpeg_quality'),
+    frame_size:   num('frame_size'),
+    night_mode:   bool('night_mode'),
+    saturation:   -2,
+  };
+  try {
+    setIndic(id, 'wait', 'WRITING');
+    const r = await fetch(`/cmd/${id}`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+    });
+    setIndic(id, r.ok ? 'ok' : '', r.ok ? 'APPLIED' : 'ERROR');
+    if (r.ok) setTimeout(() => setIndic(id,'',''), 2500);
+  } catch(_) { setIndic(id,'','ERR'); }
+}
+
+function setIndic(id, cls, txt) {
+  const el = document.getElementById(`si-${id}`);
+  if (!el) return;
+  el.className = `sindic ${cls}`;
+  el.textContent = txt;
+}
+
+function sl(el, id, vid) {
+  const v = document.getElementById(vid);
+  if (v) v.textContent = el.value;
+  schedPost(id);
+}
+
+// ── online state ───────────────────────────────────────────────────────────
+const state = {};
+function setLive(id, live) {
+  if (state[id] === live) return;
+  state[id] = live;
+  const unit = document.getElementById(`unit-${id}`);
+  const img  = document.getElementById(`img-${id}`);
+  const ns   = document.getElementById(`ns-${id}`);
+  const pill = document.getElementById(`pill-${id}`);
+  const ptxt = document.getElementById(`ptxt-${id}`);
+  unit.className = `unit ${live ? 'live' : 'dead'}`;
+  img.classList.toggle('dim', !live);
+  ns.classList.toggle('show', !live);
+  pill.classList.toggle('live', live);
+  ptxt.textContent = live ? 'LIVE' : 'OFFLINE';
+  document.getElementById('h-count').textContent =
+    Object.values(state).filter(Boolean).length;
+}
+
+// ── img reconnect ──────────────────────────────────────────────────────────
+const rtimers = {};
+function imgErr(id) {
+  setLive(id, false);
+  clearTimeout(rtimers[id]);
+  rtimers[id] = setTimeout(() => {
+    const img = document.getElementById(`img-${id}`);
+    if (img) img.src = `/live/${id}?_=${Date.now()}`;
+  }, 3000);
+}
+function imgLoad(id) {
+  // onload fires on connection, status polling will confirm
+}
+
+// ── timestamp ──────────────────────────────────────────────────────────────
+function tickTs() {
+  const t = new Date().toISOString().replace('T',' ').slice(0,19);
+  CAMS.forEach(id => { const el = document.getElementById(`ts-${id}`); if (el) el.textContent = t; });
+}
+setInterval(tickTs, 1000); tickTs();
+
+// ── poll /status ───────────────────────────────────────────────────────────
+async function pollStatus() {
+  try {
+    const r = await fetch('/status');
+    if (!r.ok) return;
+    const list = await r.json();
+    const seen = new Set();
+    (list||[]).forEach(({id,online}) => { seen.add(id); setLive(id, online); });
+    CAMS.forEach(id => { if (!seen.has(id)) setLive(id, false); });
+  } catch(_) {}
+}
+pollStatus();
+setInterval(pollStatus, 5000);
+</script>
+</body>
+</html>

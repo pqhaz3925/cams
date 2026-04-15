@@ -1,0 +1,13 @@
+# ESP-IDF build artifacts
+esp32cam/build/
+esp32cam/sdkconfig
+esp32cam/sdkconfig.old
+esp32cam/managed_components/
+esp32cam/dependencies.lock
+
+# Go build output
+server/cams-server
+
+# Data
+recordings/
+*.mp4
