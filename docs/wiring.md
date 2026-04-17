@@ -4,19 +4,19 @@
 
 ```mermaid
 flowchart LR
-    mains[AC 220V<br/>wall socket]
-    psu[12V 2A<br/>wall adapter]
-    buck[Buck converter<br/>LM2596 / MP1584<br/>12V → 5V, ≥1A]
-    esp[ESP32-S3-N16R8<br/>onboard LDO<br/>5V → 3.3V]
-    cam[OV3660<br/>on FFC ribbon]
-    mic[INMP441<br/>I2S mic]
+    mains[AC 220V wall socket]
+    psu[12V 2A wall adapter]
+    buck[Buck converter LM2596/MP1584<br/>12V to 5V, 1A+]
+    esp[ESP32-S3-N16R8<br/>onboard LDO 5V to 3.3V]
+    cam[OV3660 on FFC ribbon]
+    mic[INMP441 I2S mic]
 
-    mains -- 220V AC --> psu
-    psu == 12V DC ==> buck
-    buck == 5V ==> esp
-    esp -. 3.3V .-> mic
-    esp -- camera socket --> cam
-    esp -- I2S bus --> mic
+    mains -->|220V AC| psu
+    psu -->|12V DC| buck
+    buck -->|5V| esp
+    esp -->|3.3V power| mic
+    esp -->|camera socket| cam
+    esp -->|I2S bus| mic
 ```
 
 ## Power path
